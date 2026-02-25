@@ -4,3 +4,4 @@ __pycache__/
 venv/
 iQ self.session
 iQ self.session-journal
+test.ipynb
