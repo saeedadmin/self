@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+venv/
+iQ self.session
+iQ self.session-journal
