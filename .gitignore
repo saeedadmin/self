@@ -5,3 +5,4 @@ venv/
 iQ self.session
 iQ self.session-journal
 src/test.ipynb
+src/*.png
