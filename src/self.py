@@ -8,6 +8,8 @@ import scren_tools
 from dotenv import load_dotenv
 from mistralai import Mistral
 from telethon import TelegramClient, events
+from telethon.errors import FloodWaitError, MessageDeleteForbiddenError
+from telethon.tl.functions.messages import DeleteMessagesRequest
 
 
 load_dotenv()
@@ -119,7 +121,6 @@ async def screen_handler(event):
     except Exception:
         await event.edit("**Screenshot failed.**")
 
-
 @client.on(events.NewMessage(pattern=r"(?i)^\.tools$", outgoing=True))
 async def tools_handler(event):
     await event.edit(
@@ -177,6 +178,98 @@ async def ai_check(event):
     else f"**Answer:**\n{response}"
     )
 
+MAX_DELETE = 1000
+CHUNK_SIZE = 100
+@client.on(events.NewMessage(pattern=r"(?i)^\.purge(?:\s+(\d+))?$", outgoing=True))
+async def purge_handler(event):
+    start_time = time.time()
+    count = event.pattern_match.group(1)
+
+    if not count and not event.is_reply:
+        await event.edit("Reply or provide number of messages to delete.")
+        return
+
+    count = int(count) if count else 0
+
+    if count > MAX_DELETE:
+        await event.edit(f"Limit is {MAX_DELETE} messages max.")
+        return
+
+    messages_to_delete = []
+    deleted = 0
+    errors = 0
+    flood_wait_time = 0
+
+    try:
+        # حالت ریپلای
+        if event.is_reply:
+            reply = await event.get_reply_message()
+            async for msg in client.iter_messages(
+                event.chat_id,
+                min_id=reply.id
+            ):
+                messages_to_delete.append(msg.id)
+                if count and len(messages_to_delete) >= count:
+                    break
+
+        # حالت عدد بدون ریپلای (فقط پیام‌های خودت)
+        else:
+            async for msg in client.iter_messages(
+                event.chat_id,
+                limit=count + 1,
+                max_id=event.id
+            ):
+                if msg.id != event.id:
+                    messages_to_delete.append(msg.id)
+
+                if len(messages_to_delete) >= count:
+                    break
+
+        await event.delete()
+
+        # حذف دسته‌ای
+        for i in range(0, len(messages_to_delete), CHUNK_SIZE):
+            chunk = messages_to_delete[i:i + CHUNK_SIZE]
+
+            while True:
+                try:
+                    result = await client.delete_messages(
+                        event.chat_id,
+                        chunk
+                    )
+
+                    if result:
+                        deleted += len(chunk)
+                    else:
+                        errors += len(chunk)
+
+                    break
+
+                except FloodWaitError as e:
+                    flood_wait_time += e.seconds
+                    await asyncio.sleep(e.seconds)
+
+                except Exception:
+                    errors += len(chunk)
+                    break
+
+        duration = round(time.time() - start_time, 2)
+
+        report = (
+            f"🧹 Purge Completed\n\n"
+            f"Deleted: {deleted}\n"
+            f"Errors: {errors}\n"
+            f"FloodWait: {flood_wait_time}s\n"
+            f"Time: {duration}s"
+        )
+
+        await client.send_message(event.chat_id, report)
+
+    except Exception as e:
+        await client.send_message(
+            event.chat_id,
+            f"❌ Unexpected error:\n{str(e)}"
+        )
 # Start
 async def main():
     await client.start()
