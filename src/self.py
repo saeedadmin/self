@@ -286,10 +286,15 @@ async def start_web():
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
 
-# Start
-async def main():
+async def start_bot():
     await client.start()
-    await client.send_message("me", "**iQ Self run**\n`.panel`")
-    await start_web()
+    await client.send_message("me", "iQ Self run")
     await client.run_until_disconnected()
 
+async def main():
+    await asyncio.gather(
+        start_web(),
+        start_bot(),
+    )
+
+asyncio.run(main())
