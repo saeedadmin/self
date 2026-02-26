@@ -4,6 +4,7 @@ import sys
 import time
 
 import aiohttp
+from aiohttp import web
 import scren_tools
 from dotenv import load_dotenv
 from mistralai import Mistral
@@ -277,3 +278,11 @@ async def main():
     await client.run_until_disconnected()
 
 asyncio.run(main())
+
+async def handle(request):
+    return web.Response(text="iQ Self running!")
+
+app = web.Application()
+app.router.add_get("/", handle)
+
+web.run_app(app, port=8000)
