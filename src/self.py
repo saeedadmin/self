@@ -178,10 +178,11 @@ async def ai_check(event):
     else f"**Answer:**\n{response}"
     )
 
-MAX_DELETE = 1000
-CHUNK_SIZE = 100
+
 @client.on(events.NewMessage(pattern=r"(?i)^\.purge(?:\s+(\d+))?$", outgoing=True))
 async def purge_handler(event):
+    MAX_DELETE = 1000
+    CHUNK_SIZE = 100
     start_time = time.time()
     count = event.pattern_match.group(1)
 
@@ -199,6 +200,7 @@ async def purge_handler(event):
     deleted = 0
     errors = 0
     flood_wait_time = 0
+    MAX_FLOODWAIT = 240
 
     try:
         # حالت ریپلای
@@ -247,6 +249,12 @@ async def purge_handler(event):
 
                 except FloodWaitError as e:
                     flood_wait_time += e.seconds
+                    if flood_wait_time > MAX_FLOODWAIT:
+                        await client.send_message(
+                            event.chat_id,
+                            f"⚠️ FloodWait exceeded {MAX_FLOODWAIT}s. Stopping purge."
+                        )
+                        break
                     await asyncio.sleep(e.seconds)
 
                 except Exception:
@@ -270,6 +278,7 @@ async def purge_handler(event):
             event.chat_id,
             f"❌ Unexpected error:\n{str(e)}"
         )
+
 # Start
 async def main():
     await client.start()
