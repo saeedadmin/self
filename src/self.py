@@ -271,25 +271,18 @@ async def purge_handler(event):
             event.chat_id,
             f"❌ Unexpected error:\n{str(e)}"
         )
-
-async def handle(request):
-    return web.Response(text="OK")
-
-async def start_web():
-    app = web.Application()
-    app.router.add_get("/", handle)
-
-    runner = web.AppRunner(app)
-    await runner.setup()
-
-    port = int(os.environ.get("PORT", 8000))
-    site = web.TCPSite(runner, "0.0.0.0", port)
-    await site.start()
-
 # Start
 async def main():
     await client.start()
     await client.send_message("me", "**iQ Self run**\n`.panel`")
-    await start_web()
     await client.run_until_disconnected()
 
+asyncio.run(main())
+
+async def handle(request):
+    return web.Response(text="iQ Self running!")
+
+app = web.Application()
+app.router.add_get("/", handle)
+
+web.run_app(app, port=8000)
